@@ -2,8 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import json
-# Imported regex to handle messy price strings
 import re
+import webbrowser
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -14,10 +14,7 @@ def get_soup(url):
     try:
         response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
-
-        # Force UTF-8 encoding to handle currency symbols like £ correctly
-        response.encoding = 'utf-8'
-
+        response.encoding = 'utf-8'  # Fix encoding for currency symbols
         return BeautifulSoup(response.text, 'html.parser')
     except requests.exceptions.RequestException as e:
         print(f"Error fetching {url}: {e}")
@@ -27,6 +24,9 @@ def get_soup(url):
 def scrape_books():
     url = "http://books.toscrape.com/catalogue/category/books/science_22/index.html"
     print(f"Scraping {url}...")
+    print("Opening page in browser...")
+
+    webbrowser.open(url)
 
     soup = get_soup(url)
     if not soup:
@@ -39,31 +39,26 @@ def scrape_books():
         title = product.find('h3').find('a')['title']
         price_text = product.find('p', class_='price_color').text
 
-        # I Used Regex to extract ONLY the numbers (e.g., "51.77")
+        # Extract number only using Regex
         price_match = re.search(r"\d+\.\d+", price_text)
-
-        if price_match:
-            price = float(price_match.group())
-        else:
-            price = 0.0
+        price = float(price_match.group()) if price_match else 0.0
 
         availability = product.find('p', class_='instock availability').text.strip()
 
-        book_info = {
+        books_data.append({
             'title': title,
             'price': price,
             'currency': 'GBP',
             'availability': availability,
             'source': 'BooksToScrape'
-        }
-        books_data.append(book_info)
+        })
 
     return books_data
 
 
 def save_data(data):
     if not data:
-        print("No data found to save.")
+        print("No data found.")
         return
 
     df = pd.DataFrame(data)
@@ -78,10 +73,11 @@ def save_data(data):
     if not df.empty:
         cheapest = df.loc[df['price'].idxmin()]
         expensive = df.loc[df['price'].idxmax()]
+
         print(f"Cheapest: '{cheapest['title']}' (£{cheapest['price']})")
         print(f"Most Expensive: '{expensive['title']}' (£{expensive['price']})")
 
 
 if __name__ == "__main__":
-    scraped_data = scrape_books()
-    save_data(scraped_data)
+    data = scrape_books()
+    save_data(data)

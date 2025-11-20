@@ -60,3 +60,37 @@ def scrape_books():
         books_data.append(book_info)
 
     return books_data
+
+def save_data(data):
+    """
+    Saves the scraped data to CSV and JSON files.
+    """
+    if not data:
+        print("No data found to save.")
+        return
+
+    # Convert to Pandas DataFrame for easy saving
+    df = pd.DataFrame(data)
+
+    # Save to CSV (Excel compatible)
+    df.to_csv('scraped_products.csv', index=False)
+    print(f"Saved {len(data)} items to 'scraped_products.csv'")
+
+    # Save to JSON
+    with open('scraped_products.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    print(f"Saved {len(data)} items to 'scraped_products.json'")
+
+    # Simple comparison logic (Cheapest vs Most Expensive)
+    print("\n--- Price Comparison ---")
+    cheapest = df.loc[df['price'].idxmin()]
+    expensive = df.loc[df['price'].idxmax()]
+
+    print(f"Cheapest: '{cheapest['title']}' (£{cheapest['price']})")
+    print(f"Most Expensive: '{expensive['title']}' (£{expensive['price']})")
+
+
+if __name__ == "__main__":
+    # Run the scraper
+    scraped_data = scrape_books()
+    save_data(scraped_data)

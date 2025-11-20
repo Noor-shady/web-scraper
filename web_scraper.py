@@ -19,3 +19,44 @@ def get_soup(url):
     except requests.exceptions.RequestException as e:
         print(f"Error fetching {url}: {e}")
         return None
+
+
+def scrape_books():
+    """
+    Scrapes book data from books.toscrape.com.
+    """
+    url = "http://books.toscrape.com/catalogue/category/books/science_22/index.html"
+    print(f"Scraping {url}...")
+
+    soup = get_soup(url)
+    if not soup:
+        return []
+
+    books_data = []
+
+    # Find all book containers (articles with class 'product_pod')
+    products = soup.find_all('article', class_='product_pod')
+
+    for product in products:
+        # 1. Extract Title
+        title = product.find('h3').find('a')['title']
+
+        # 2. Extract Price
+        price_text = product.find('p', class_='price_color').text
+        # Remove currency symbol and convert to float
+        price = float(price_text.replace('£', '').replace('$', ''))
+
+        # 3. Extract Availability
+        availability = product.find('p', class_='instock availability').text.strip()
+
+        # Store in a dictionary
+        book_info = {
+            'title': title,
+            'price': price,
+            'currency': 'GBP',
+            'availability': availability,
+            'source': 'BooksToScrape'
+        }
+        books_data.append(book_info)
+
+    return books_data

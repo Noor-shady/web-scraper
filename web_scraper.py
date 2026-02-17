@@ -44,3 +44,8 @@ class BookScraper:
             return None
 
     def scrape_books(self) -> List[Dict[str, any]]:
+        soup = self.fetch_soup(self.BASE_URL)
+        if not soup:
+            return []
+
+        books_data = []

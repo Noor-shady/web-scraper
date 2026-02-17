@@ -49,3 +49,66 @@ class BookScraper:
             return []
 
         books_data = []
+        products = soup.select('article.product_pod')
+
+        for product in products:
+            try:
+                title = product.h3.a.get('title', 'Unknown Title')
+                price_text = product.select_one('p.price_color').text
+
+                # Extract number only using Regex
+                price_match = re.search(r"(\d+\.\d+)", price_text)
+                price = float(price_match.group(1)) if price_match else 0.0
+
+                availability_node = product.select_one('.instock.availability')
+                availability = availability_node.get_text(strip=True) if availability_node else "Unknown"
+
+                books_data.append({
+                    'title': title,
+                    'price': price,
+                    'currency': 'GBP',
+                    'availability': availability,
+                    'source': 'BooksToScrape'
+                })
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Skipping a product due to parsing error: {e}")
+                continue
+
+        logger.info(f"Successfully parsed {len(books_data)} books.")
+        return books_data
+
+    @staticmethod
+    def save_data(data: List[Dict[str, any]], csv_path: str = 'scraped_products.csv', json_path: str = 'scraped_products.json') -> None:
+        """Saves scraped data to CSV/JSON and outputs a statistical summary."""
+        if not data:
+            logger.warning("No data found to save.")
+            return
+
+        df = pd.DataFrame(data)
+
+        try:
+            # Save to CSV
+            df.to_csv(csv_path, index=False)
+            logger.info(f"Saved {len(data)} items to '{csv_path}'")
+
+            # Save to JSON
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            logger.info(f"Saved {len(data)} items to '{json_path}'")
+
+            # Output Price Comparison
+            logger.info("--- Price Comparison Summary ---")
+            cheapest = df.loc[df['price'].idxmin()]
+            expensive = df.loc[df['price'].idxmax()]
+
+            logger.info(f"Cheapest: '{cheapest['title']}' (£{cheapest['price']})")
+            logger.info(f"Most Expensive: '{expensive['title']}' (£{expensive['price']})")
+
+        except IOError as e:
+            logger.error(f"Failed to save data to disk: {e}")
+
+
+if __name__ == "__main__":
+    scraper = BookScraper()
+    scraped_data = scraper.scrape_books()
+    scraper.save_data(scraped_data)
